@@ -1,0 +1,689 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+	<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7"/>
+	<title>Lunch Wheel</title>
+	<script type="text/javascript">
+//<![CDATA[
+//try{if (!window.CloudFlare) {var CloudFlare=[{verbose:0,p:0,byc:0,owlid:"cf",bag2:1,mirage2:0,oracle:0,paths:{cloudflare:"/cdn-cgi/nexp/dok3v=1613a3a185/"},atok:"a2f2c4ec46936b647a5bc0655bc38fff",petok:"af8d8328fddad9570347b7b9fd5424cdefb48505-1434628102-1800",zone:"bramp.net",rocket:"0",apps:{"ga_key":{"ua":"UA-136478-5","ga_bs":"2"}}}];!function(a,b){a=document.createElement("script"),b=document.getElementsByTagName("script")[0],a.async=!0,a.src="//ajax.cloudflare.com/cdn-cgi/nexp/dok3v=7e13c32551/cloudflare.min.js",b.parentNode.insertBefore(a,b)}()}}catch(e){};
+//]]>
+</script>
+<!--<link href="css/reset.css" type="text/css" rel="stylesheet">-->
+<link href="/stylesheets/reset.css" rel="stylesheet">
+<!--<link href="css/jquery.terminal.css" type="text/css" rel="stylesheet">-->
+<link href="/stylesheets/jquery.terminal.css" rel="stylesheet">
+<!--<script type="text/javascript" src="lib/jquery/jquery-1.6.2.min.js"></script>-->
+<script src="//code.jquery.com/jquery-1.10.2.js"></script>
+<!--<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>-->
+<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+<!--<script type="text/javascript" src="lib/jquery/jquery.tinysort.js"></script>-->
+<script src="/javascripts/lib/jquery/plugin/jquery.tinysort.js"></script>
+<!--<script type="text/javascript" src="lib/jquery/jquery.terminal-0.8.8.js"></script>-->
+<script src="/javascripts/lib/jquery/plugin/jquery.terminal-0.8.8.js"></script>
+
+<!--[if IE]><script type="text/javascript" src="excanvas.js"></script><![endif]-->
+<script type="text/javascript">
+	// Helpers
+	shuffle = function(o) {
+		for ( var j, x, i = o.length; i; j = parseInt(Math.random() * i), x = o[--i], o[i] = o[j], o[j] = x)
+			;
+		return o;
+	};
+
+	String.prototype.hashCode = function(){
+		// See http://www.cse.yorku.ca/~oz/hash.html
+		var hash = 5381;
+		for (i = 0; i < this.length; i++) {
+			char = this.charCodeAt(i);
+			hash = ((hash<<5)+hash) + char;
+			hash = hash & hash; // Convert to 32bit integer
+		}
+		return hash;
+	}
+
+	Number.prototype.mod = function(n) {
+		return ((this%n)+n)%n;
+	}
+
+	function initWheelCommand()
+	{
+		var segments = new Array();
+		$.each($('#venues input:checked'), function(key, cbox) {
+			segments.push( cbox.value );
+		});
+
+		wheel.segments = segments;
+		wheel.update();
+	}
+
+	jQuery(function($, undefined) {
+    $('#term_demo').terminal(function(command, term) {
+		if (command == 'stop') {
+	        wheel.stop();
+        } else if(command == 'start') {
+        	wheel.spin();
+
+        } else if(command == 'mode money') {
+
+		/*초기화*/
+		$('#venues ul').find('li').each(function(){
+			$(this).remove();
+		})
+		venues = moneys;
+		initCbox();
+
+		initWheelCommand();
+
+		mode = 'money';
+		} else if(command == 'mode user') {
+
+			/*초기화*/
+			$('#venues ul').find('li').each(function(){
+				$(this).remove();
+			})
+			venues = users;
+			initCbox();
+
+
+			initWheelCommand();
+			mode = 'user';
+       	} else if(command == 'remove all') {
+       		console.log($('#venues ul').find('input:checked'));
+        	$('#venues ul').find('input:checked').each(function(){
+        		console.log($(this));
+        		$(this).attr('checked',false);
+        	});
+        	initWheelCommand();
+      	} else if(command == 'select all') {
+	    	$('#venues ul').find('input').each(function(){
+	    		this.checked= true;
+	    	});
+	    	initWheelCommand();
+
+    	} else if(command == 'add') {
+
+
+			var person = prompt("이름이 뭐에요?");
+
+			if(person != "")
+			{
+				term.echo( person + ' 등록');
+				var num = Object.keys(venues).length;
+				venues[(num+1)+""] = person;
+				console.log(venues);
+
+				/* 임시 방편 */
+				$('#venues ul').find('li').each(function(){
+					$(this).remove();
+				})
+				initCbox();
+
+				$('#venues ul').find('#venue-'+num+1).each(function(){
+		    		this.checked= true;
+		    	});
+			}
+
+
+		/*
+	   	if(res == 'po')
+		{
+			$('#venue-11').each(function(){ this.checked= true; });
+			$('#venue-12').each(function(){ this.checked= true; });
+			$('#venue-13').each(function(){ this.checked= true; });
+			$('#venue-14').each(function(){ this.checked= true; });
+		}
+		else if(res == 'qm')
+		{
+			$('#venue-15').each(function(){ this.checked= true; });
+			$('#venue-16').each(function(){ this.checked= true; });
+		}
+		else
+		{
+			term.echo('대상이 없습니다 .');
+		}
+		*/
+    	initWheelCommand();
+	   	} else if(/add [0-9]?/.test(command)) {
+
+			var res = command.match(/[0-9]{1,}/g);
+
+			$('#venues ul').find('#venue-'+res).each(function(){
+	    		this.checked= true;
+	    	});
+
+	    	initWheelCommand();
+
+    	} else if(/remove [0-9]?/.test(command)) {
+
+			var res = command.match(/[0-9]{1,}/g);
+
+		   		$('#venues ul').find('#venue-'+res).each(function(){
+	        		$(this).attr('checked',false);
+	        	});
+
+			initWheelCommand();
+
+	    } else if(parseInt(command) > '1000' && parseInt(command) < 10000){
+	        term.echo(command + '원 빵');
+        } else if(command == 'size up'){
+        $('#term_demo').css("height", "100px");
+        } else if(command == 'size init'){
+        $('#term_demo').css("height", "30px");
+	    } else {
+	        term.echo('unknown command');
+	    }
+    }, {
+        greetings: 'sprint 3에 오신 것을 환영 합니다.',
+        name: 'js_demo',
+        height: 30,
+        prompt: '> '});
+  });
+
+	</script>
+	<script type="text/javascript">
+	var mode = 'user';
+	books = [];
+	var venues = {
+		"1"  : "한경만",
+		"2"  : "김지훈",
+		"3"  : "정은영",
+		"4"  : "윤현상",
+		"5"  : "정창일",
+		"6"  : "김지환",
+		"7"  : "심재희",
+		"8"  : "김보경",
+		"9"  : "서정현",
+		"10" : "신미란",
+		"11" : "이승엽",
+		"12" : "박은규",
+		"13" : "박정균",
+		"14" : "이경환",
+		"15" : "임성현",
+		"16" : "김선숙",
+		"17" : "박경수"
+	};
+
+	var users = {
+		"1"  : "한경만",
+		"2"  : "김지훈",
+		"3"  : "정은영",
+		"4"  : "윤현상",
+		"5"  : "정창일",
+		"6"  : "김지환",
+		"7"  : "심재희",
+		"8"  : "김보경",
+		"9"  : "서정현",
+		"10" : "신미란",
+		"11" : "이승엽",
+		"12" : "박은규",
+		"13" : "박정균",
+		"14" : "이경환",
+		"15" : "임성현",
+		"16" : "김선숙",
+		"17" : "박경수"
+	};
+
+	var moneys = {
+		"1"  : "1000원",
+		"2"  : "3000원",
+		"3"  : "3000원",
+		"4"  : "5000원",
+		"5"  : "10000원",
+		"6"  : "5000원",
+		"7"  : "3000원",
+		"8"  : "살려쥼"
+	};
+
+	function initCbox ()
+	{
+		var venueContainer = $('#venues ul');
+		$.each(venues, function(key, item) {
+			venueContainer.append(
+				$(document.createElement("li"))
+				.append(
+					$(document.createElement("input")).attr({
+						id:    'venue-' + key
+						,name:  item
+						,value: '('+key+')'+item
+						,type:  'checkbox'
+						,checked:true
+					})
+					.change( function() {
+						var cbox = $(this)[0];
+						var segments = wheel.segments;
+						var i = segments.indexOf(cbox.value);
+
+						if (cbox.checked && i == -1) {
+							segments.push(cbox.value);
+
+						} else if ( !cbox.checked && i != -1 ) {
+							segments.splice(i, 1);
+						}
+
+						segments.sort();
+						wheel.update();
+					} )
+
+					).append(
+					$(document.createElement('label')).attr({
+						'for':  'venue-' + key
+					})
+					.text( item +'('+key+')' )
+					)
+					)
+		});
+
+		$('#venues ul>li').tsort("input", {attr: "value"});
+	}
+
+	$(initCbox);
+
+	/*
+	$(function() {
+
+		var venueContainer = $('#venues ul');
+		$.each(venues, function(key, item) {
+			venueContainer.append(
+				$(document.createElement("li"))
+				.append(
+					$(document.createElement("input")).attr({
+						id:    'venue-' + key
+						,name:  item
+						,value: item
+						,type:  'checkbox'
+						,checked:true
+					})
+					.change( function() {
+						var cbox = $(this)[0];
+						var segments = wheel.segments;
+						var i = segments.indexOf(cbox.value);
+
+						if (cbox.checked && i == -1) {
+							segments.push(cbox.value);
+
+						} else if ( !cbox.checked && i != -1 ) {
+							segments.splice(i, 1);
+						}
+
+						segments.sort();
+						wheel.update();
+					} )
+
+					).append(
+					$(document.createElement('label')).attr({
+						'for':  'venue-' + key
+					})
+					.text( item )
+					)
+					)
+		});
+
+		$('#venues ul>li').tsort("input", {attr: "value"});
+	});
+	*/
+	</script>
+	<script type="text/javascript">
+	// WHEEL!
+	var wheel = {
+
+		timerHandle : 0,
+		timerDelay : 33,
+
+		angleCurrent : 0,
+		angleDelta : 0,
+
+		size : 350,
+
+		canvasContext : null,
+
+		//colors : [ '#ffff00', '#ffc700', '#ff9100', '#ff6301', '#ff0000', '#c6037e','#713697', '#444ea1', '#2772b2', '#0297ba', '#008e5b', '#8ac819' ],
+
+		//colors : ['#FBA51A', '#F4EB1F', '#9BCA3C', '#70BF54', '#6FC4A3', '#40B8EA', '#436FB5', '#5B52A3', '#874FA1', '#D1499B', '#EC197A', '#ED1E24'],
+		ran_colors : ['#9BCA3C', '#70BF54', '#6FC4A3', '#40B8EA', '#436FB5', '#5B52A3', '#874FA1', '#D1499B', '#EC197A', '#ED1E24'],
+
+		colors : ['#F4EB1F'],
+		//segments : [ 'Andrew', 'Bob', 'Fred', 'John', 'China', 'Steve', 'Jim', 'Sally', 'Andrew', 'Bob', 'Fred', 'John', 'China', 'Steve', 'Jim'],
+		segments : [],
+
+		seg_colors : [], // Cache of segments to colors
+
+		maxSpeed : Math.PI / 16,
+
+		upTime : 1000, // How long to spin up for (in ms)
+		downTime : 17000, // How long to slow down for (in ms)
+
+		spinStart : 0,
+
+		frames : 0,
+
+		centerX : 450,
+		centerY : 360,
+
+		spin : function() {
+
+
+
+
+			// Start the wheel only if it's not already spinning
+			if (wheel.timerHandle == 0) {
+
+/*
+				if (gamemode = 'sprint' || false)
+				{
+					var person = prompt("얼마 빵 입니까? ", "5000원");
+				}
+*/
+				wheel.spinStart = new Date().getTime();
+				wheel.maxSpeed = Math.PI / (16 + Math.random()); // Randomly vary how hard the spin is
+				wheel.frames = 0;
+				wheel.sound.play();
+
+				wheel.timerHandle = setInterval(wheel.onTimerTick, wheel.timerDelay);
+			}
+		},
+
+		stop : function() {
+
+			clearInterval(wheel.timerHandle);
+		    wheel.timerHandle = 0;
+		    wheel.sound.pause();
+        	wheel.sound.currentTime = 0;
+
+		},
+
+
+		onTimerTick : function() {
+
+			wheel.frames++;
+
+			wheel.draw();
+
+			var duration = (new Date().getTime() - wheel.spinStart);
+			var progress = 0;
+			var finished = false;
+
+			if (duration < wheel.upTime) {
+				progress = duration / wheel.upTime;
+				wheel.angleDelta = wheel.maxSpeed
+				* Math.sin(progress * Math.PI / 2);
+			} else {
+				progress = duration / wheel.downTime;
+				wheel.angleDelta = wheel.maxSpeed
+				* Math.sin(progress * Math.PI / 2 + Math.PI / 2);
+				if (progress >= 1)
+					finished = true;
+			}
+
+			wheel.angleCurrent += wheel.angleDelta;
+			while (wheel.angleCurrent >= Math.PI * 2)
+				// Keep the angle in a reasonable range
+			wheel.angleCurrent -= Math.PI * 2;
+
+			if (finished) {
+				clearInterval(wheel.timerHandle);
+				wheel.timerHandle = 0;
+				wheel.angleDelta = 0;
+
+				//$("#counter").html((wheel.frames / duration * 1000) + " FPS");
+
+				var i = wheel.segments.length - Math.floor((wheel.angleCurrent / (Math.PI * 2))	* wheel.segments.length) - 1;
+				//$("#counter").html(wheel.segments[i] + ' 님 당첨을 축하드립니다.');
+
+				if(mode == 'user')
+				{
+					var result = confirm(wheel.segments[i] + ' 님 당첨을 축하드립니다.\n 당첨자를 제외 하시겠습니까?' );
+					//$("#counter").html(wheel.segments[i] + ' 님 당첨을 축하드립니다.');
+
+					if(result == true)
+					{
+						var usernum = wheel.segments[i].substr(1,1);
+						//alert('usernum : ' + usernum);
+						$('#venues ul').find('#venue-'+usernum).each(function(){
+		        		$(this).attr('checked',false);
+			        	});
+
+						initWheelCommand();
+					}
+				}
+			}
+
+			/*
+			// Display RPM
+			var rpm = (wheel.angleDelta * (1000 / wheel.timerDelay) * 60) / (Math.PI * 2);
+			$("#counter").html( Math.round(rpm) + " RPM" );
+			*/
+		},
+
+		init : function(optionList) {
+			try {
+
+				wheel.colors.push(wheel.ran_colors[Math.floor(Math.random() * wheel.ran_colors.length)]);
+
+				wheel.initWheel();
+				wheel.initAudio();
+				wheel.initCanvas();
+				wheel.draw();
+
+				$.extend(wheel, optionList);
+
+			} catch (exceptionData) {
+				alert('Wheel is not loaded ' + exceptionData);
+			}
+
+		},
+
+		initAudio : function() {
+			var sound = document.createElement('audio');
+			sound.setAttribute('src', '/sound/wheel.mp3');
+			wheel.sound = sound;
+		},
+
+		initCanvas : function() {
+			var canvas = $('#wheel #canvas').get(0);
+
+			/*if ($.browser.msie) {
+				canvas = document.createElement('canvas');
+				$(canvas).attr('width', 1000).attr('height', 600).attr('id', 'canvas').appendTo('.wheel');
+				canvas = G_vmlCanvasManager.initElement(canvas);
+			}*/
+
+			canvas.addEventListener("click", wheel.spin, false);
+			wheel.canvasContext = canvas.getContext("2d");
+		},
+
+		initWheel : function() {
+			shuffle(wheel.colors);
+		},
+
+		// Called when segments have changed
+		update : function() {
+			// Ensure we start mid way on a item
+			//var r = Math.floor(Math.random() * wheel.segments.length);
+			var r = 0;
+			wheel.angleCurrent = ((r + 0.5) / wheel.segments.length) * Math.PI * 2;
+
+			var segments = wheel.segments;
+			var len      = segments.length;
+			var colors   = wheel.colors;
+			var colorLen = colors.length;
+
+			// Generate a color cache (so we have consistant coloring)
+			var seg_color = new Array();
+			for (var i = 0; i < len; i++){
+				//seg_color.push( colors [ segments[i].hashCode().mod(colorLen) ] );
+				seg_color.push( colors [ i.mod(colorLen) ] );
+			}
+
+
+			wheel.seg_color = seg_color;
+
+			wheel.draw();
+		},
+
+		draw : function() {
+			wheel.clear();
+			wheel.drawWheel();
+			wheel.drawNeedle();
+		},
+
+		clear : function() {
+			var ctx = wheel.canvasContext;
+			ctx.clearRect(0, 0, 1000, 800);
+		},
+
+		drawNeedle : function() {
+			var ctx = wheel.canvasContext;
+			var centerX = wheel.centerX;
+			var centerY = wheel.centerY;
+			var size = wheel.size;
+
+			ctx.lineWidth = 1;
+			ctx.strokeStyle = '#000000';
+			ctx.fileStyle = '#ffffff';
+
+			ctx.beginPath();
+
+			ctx.moveTo(centerX + size - 40, centerY);
+			ctx.lineTo(centerX + size + 20, centerY - 10);
+			ctx.lineTo(centerX + size + 20, centerY + 10);
+			ctx.closePath();
+
+			ctx.stroke();
+			ctx.fill();
+
+			// Which segment is being pointed to?
+			var i = wheel.segments.length - Math.floor((wheel.angleCurrent / (Math.PI * 2))	* wheel.segments.length) - 1;
+
+			// Now draw the winning name
+			ctx.textAlign = "left";
+			ctx.textBaseline = "middle";
+			ctx.fillStyle = '#000000';
+			ctx.font = "2em 맑은고딕";
+			ctx.fillText(wheel.segments[i], centerX + size + 25, centerY);
+		},
+
+		drawSegment : function(key, lastAngle, angle) {
+			var ctx = wheel.canvasContext;
+			var centerX = wheel.centerX;
+			var centerY = wheel.centerY;
+			var size = wheel.size;
+
+			var segments = wheel.segments;
+			var len = wheel.segments.length;
+			var colors = wheel.seg_color;
+
+			var value = segments[key];
+
+			ctx.save();
+			ctx.beginPath();
+
+			// Start in the centre
+			ctx.moveTo(centerX, centerY);
+			ctx.arc(centerX, centerY, size, lastAngle, angle, false); // Draw a arc around the edge
+			ctx.lineTo(centerX, centerY); // Now draw a line back to the centre
+
+			// Clip anything that follows to this area
+			//ctx.clip(); // It would be best to clip, but we can double performance without it
+			ctx.closePath();
+
+			ctx.fillStyle = colors[key];
+			ctx.fill();
+			ctx.stroke();
+
+			// Now draw the text
+			ctx.save(); // The save ensures this works on Android devices
+			ctx.translate(centerX, centerY);
+			ctx.rotate((lastAngle + angle) / 2);
+
+			ctx.fillStyle = '#000000';
+			ctx.fillText(value.substr(0, 20), size / 2 + 20, 0);
+			ctx.restore();
+
+			ctx.restore();
+		},
+
+		drawWheel : function() {
+			var ctx = wheel.canvasContext;
+
+			var angleCurrent = wheel.angleCurrent;
+			var lastAngle    = angleCurrent;
+
+			var segments  = wheel.segments;
+			var len       = wheel.segments.length;
+			var colors    = wheel.colors;
+			var colorsLen = wheel.colors.length;
+
+			var centerX = wheel.centerX;
+			var centerY = wheel.centerY;
+			var size    = wheel.size;
+
+			var PI2 = Math.PI * 2;
+
+			ctx.lineWidth    = 1;
+			ctx.strokeStyle  = '#ffffff';
+			ctx.textBaseline = "middle";
+			ctx.textAlign    = "center";
+			ctx.font         = "1.4em 맑은고딕";
+
+			for (var i = 1; i <= len; i++) {
+				var angle = PI2 * (i / len) + angleCurrent;
+				wheel.drawSegment(i - 1, lastAngle, angle);
+				lastAngle = angle;
+			}
+			// Draw a center circle
+			ctx.beginPath();
+			ctx.arc(centerX, centerY, 20, 0, PI2, false);
+			ctx.closePath();
+
+			ctx.fillStyle   = '#ffffff';
+			ctx.strokeStyle = '#000000';
+			ctx.fill();
+			ctx.stroke();
+
+			// Draw outer circle
+			ctx.beginPath();
+			ctx.arc(centerX, centerY, size, 0, PI2, false);
+			ctx.closePath();
+
+			ctx.lineWidth   = 1;
+			ctx.strokeStyle = '#ffffff';
+			ctx.stroke();
+		},
+	}
+
+	window.onload = function() {
+		wheel.init();
+
+		var segments = new Array();
+		$.each($('#venues input:checked'), function(key, cbox) {
+			segments.push( cbox.value );
+		});
+
+		wheel.segments = segments;
+		wheel.update();
+
+		// Hide the address bar (for mobile devices)!
+		setTimeout(function() {
+			window.scrollTo(0, 1);
+		}, 0);
+	}
+	</script>
+
+</head>
+<body>
+	<!-- <div id="books" style="background-color: #00ff00; width: 110px; height: 90px; float:right"> -->
+	<div id="venues" style="float: right;><ul/></div>
+	<div id="books" style="float: right">
+	    <ul/>
+	</div>
+	<div id="wheel">
+		<canvas id="canvas" width="1024" height="768" style="z-index:-1;position: fixed;"></canvas>
+	</div>
+	<div id="stats">
+		<div id="counter"></div>
+	</div>
+  <div id="term_demo" class="terminal" style="width:100%; position: fixed; bottom:0;">
+
+</body>
+</html>

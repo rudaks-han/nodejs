@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+        <meta http-equiv="Content-Script-Type" content="text/javascript" />
+        <meta http-equiv="Content-Style-Type" content="text/css" />
+        <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=1">
+        <title>EER Planning Poker</title>
+
+        <link rel="stylesheet" href="/css/bootstrap.min.css">
+
+        <script src="/js/lib/jquery/jquery-1.11.3.min.js"></script>
+        <script src="/js/lib/jquery/jquery-ui-1.11.4.min.js"></script>
+        <script src="/js/lib/bootstrap/tether.min.js"></script>
+        <script src="/js/lib/bootstrap/bootstrap.min.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+
+        <style>
+        .ui-effects-transfer {
+            border: 2px dotted gray;
+        }
+        </style>
+
+        <script>
+        //var socket = io.connect();
+        var baseUrl = window.location.protocol + "//" + window.location.host + "/mobile";
+        //var baseUrl = window.location.protocol + "//" + window.location.host + "";
+        console.error('baseUrl : ' + baseUrl);
+        var options = {
+          transports: ['xhr-polling'/*, 'websocket' */],
+          'sync disconnect on unload': true
+        };
+        //var socket = io.connect(baseUrl);
+        var socket = io.connect(baseUrl, options);
+        var pathname = location.pathname;
+        var room = '' + pathname.substring(pathname.lastIndexOf('/')+1);
+        //console.error('room: ' + room);
+        //var socket = io.connect('//localhost:9999/poker', {path:'/socket.io'});
+
+        function debug(str, data)
+        {
+          console.log('[' + str + '] \n ' + JSON.stringify(data));
+        }
+
+        $(function() {
+          socket.on('connection', function(data) {
+            console.error('connection')
+            socket.emit('active-user');
+          });
+        });
+
+        socket.on('active-user', function(data) {
+          console.error('active-user : ' + JSON.stringify(data))
+        });
+
+        socket.on('login', function(data) {
+          console.error('login : ' + JSON.stringify(data))
+        });
+
+        socket.on('logout', function(data) {
+          console.error('logout : ' + JSON.stringify(data))
+        });
+        </script>
+    </head>
+
+    <body>
+      <div id="active-user-list">
+      </div>
+
+
+    </body>
+</html>

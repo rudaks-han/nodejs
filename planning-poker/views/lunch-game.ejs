@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Spectra Video</title>
+        <title>WebRTC Video</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <!-- style -->
+        <link rel='shortcut icon' type='image/x-icon' href='/images/favicon-32.ico' />
+        <link rel="stylesheet" href="/css/bootstrap.min.css">
+        <link rel="stylesheet" href="/css/video.css">
+        <link rel="stylesheet" href="/css/jquery.bxslider.css">
+
+        <style>
+        .video-stream {
+          width:200px;
+          height:150px;
+          float:left;
+          margin:10px;
+          position:relative;
+          border:1px solid red;
+        }
+        .stream-video-wrapper {
+          float:left;
+          margin:10px;
+        }
+        .video-container {
+          display:none;
+        }
+        .close-wrapper {
+          position:absolute;
+          top:0;
+          left:0;
+          width:100%;
+          height:100%;
+          background-color:#000;
+          z-index:10;
+        }
+
+        .bx-wrapper .bx-loading {min-height:0;}
+        .bx-viewport {overflow:visible !important;}
+        </style>
+        <script src="/js/lib/jquery/jquery-1.11.3.min.js"></script>
+        <script src="/js/lib/jquery/jquery-ui-1.11.4.min.js"></script>
+        <script src="/js/lib/webrtc/simplewebrtc.bundle.js"></script>
+        <script src="/js/lib/bootstrap-notify.min.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+
+        <script>
+        //var socket = io.connect();
+        var baseUrl = window.location.protocol + "//" + window.location.host + "/lunch-game";
+        //var baseUrl = window.location.protocol + "//" + window.location.host + "";
+        console.error('baseUrl : ' + baseUrl);
+        var options = {
+          transports: ['xhr-polling'/*, 'websocket' */],
+          'sync disconnect on unload': true
+        };
+        //var socket = io.connect(baseUrl);
+        var socket = io.connect(baseUrl, options);
+        var pathname = location.pathname;
+        var room = '' + pathname.substring(pathname.lastIndexOf('/')+1);
+
+        function getRandomInt(min, max)
+        {
+          return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        $(function() {
+
+          var hideEffect = function() {
+            return $('#remotesPanel > .stream-video-wrapper').hide('explode', {}, 500, function() {});
+          };
+
+          $('#mix').on('click', function(e) {
+            e.preventDefault();
+
+            var el = $('#remotesPanel > .stream-video-wrapper');
+            var len = el.length;
+            //el.hide();
+
+            var flag = false;
+
+            $.when(hideEffect()).done(function() {
+                var random = getRandomInt(0, len - 1);
+                el.eq(random).show('bounce', {}, 500, function() {});
+            });
+
+            /*
+            el.hide('explode', {}, 500, function() {
+              if (!flag)
+              {
+                var random = getRandomInt(0, len - 1);
+                console.error('random : ' + random);
+                //el.eq(random).show();
+                el.eq(random).show('bounce', {}, 500, function() {});
+                flag = true;
+              }
+            });
+            */
+          });
+
+          $('#btnClose').on('click', function() {
+            var data = {
+                room : room
+            };
+            socket.emit('close-video', data);
+          });
+
+          $('#btnOpen').on('click', function() {
+            var data = {
+                room : room
+            };
+            socket.emit('open-video', data);
+          });
+        });
+
+        socket.on('close-video', function(data) {
+          console.error('close-video called');
+          webrtc.pauseVideo();
+        });
+
+        socket.on('open-video', function(data) {
+          console.error('open-video called');
+          webrtc.resumeVideo();
+        });
+        </script>
+    </head>
+    <body>
+      <div style="margin:10px;">
+        <form id="createRoom">
+            <input id="sessionInput"/>
+            <button type="submit">Create it!</button>
+        </form>
+        <a href="#" id="mix" class="btn btn-primary">Mix</a>
+        <a href="#" id="btnClose" class="btn btn-default">Close</a>
+        <a href="#" id="btnOpen" class="btn btn-default">Open</a>
+      </div>
+
+      <div class="video-container">
+        <div class="toolbar-layer">
+
+          <div id="localScreenLayer" class='screen-share-layer' style="display:none; margin-bottom:5px;">
+            <div id="localScreenContainer" class="stream-video-wrapper video-stream"></div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div style="position:fixed; display:block; height:100%;left:0px; right:0; top:50px;">
+        <ul id="remotesPanel" style="width:100%; height:100%; top:0; left:0;">
+          <li class="stream-video-wrapper video-stream">
+              <video id="localVideo" style="height: 150px;" oncontextmenu="return false;"></video>
+          </li>
+
+          <li class="stream-video-wrapper video-stream">
+              22
+          </li>
+
+          <li class="stream-video-wrapper video-stream">
+              333
+          </li>
+        </ul>
+      </div>
+
+
+        <script>
+            //var room = location.search && location.search.split('?')[1];
+            //var room = location.pathname.split('/')[2];
+            var peerConnectionConfig;
+            $.ajax({
+                url: "https://service.xirsys.com/ice",
+                data: {
+                    ident: "rudaks",
+                    secret: "3bff0ec0-ff6e-11e5-bd77-af395686a329",
+                    domain: "node.spectra.co.kr",
+                    application: "default",
+                    room: 'node',
+                    secure: 1
+                },
+                success: function (data, status) {
+                    console.error('data : '+JSON.stringify(data));
+                    peerConnectionConfig = data.d;
+
+                    initWebRTC(peerConnectionConfig);
+                }
+            });
+
+            //perrConnectionConfig = JSON.parse('{"s":200,"p":"/ice","e":null,"d":{"iceServers":[{"url":"stun:turn02.uswest.xirsys.com"},{"username":"e45a2c6a-0cc7-11e6-a941-b71f576218a5","url":"turn:turn02.uswest.xirsys.com:443?transport=udp","credential":"e45a2d00-0cc7-11e6-8dc3-17ed94bd6648"},{"username":"e45a2c6a-0cc7-11e6-a941-b71f576218a5","url":"turn:turn02.uswest.xirsys.com:443?transport=tcp","credential":"e45a2d00-0cc7-11e6-8dc3-17ed94bd6648"},{"username":"e45a2c6a-0cc7-11e6-a941-b71f576218a5","url":"turn:turn02.uswest.xirsys.com:5349?transport=udp","credential":"e45a2d00-0cc7-11e6-8dc3-17ed94bd6648"},{"username":"e45a2c6a-0cc7-11e6-a941-b71f576218a5","url":"turn:turn02.uswest.xirsys.com:5349?transport=tcp","credential":"e45a2d00-0cc7-11e6-8dc3-17ed94bd6648"}]}}');
+            // create our webrtc connection
+            var webrtc = null;
+
+            function initWebRTC(peerConnectionConfig)
+            {
+              webrtc = new SimpleWebRTC({
+                  localVideoEl: 'localVideo',
+                  remoteVideosEl: 'removeVideo',
+                  autoRequestMedia: true,
+                  debug: false,
+                  detectSpeakingEvents: true,
+                  autoAdjustMic: false,
+                  peerConnectionConfig: peerConnectionConfig
+              });
+
+              // when it's ready, join if we got a room from the URL
+              webrtc.on('readyToCall', function () {
+                  // you can name it anything
+                  if (room) webrtc.joinRoom(room);
+              });
+
+              webrtc.on('channelMessage', function (peer, label, data) {
+                //console.error('channelMessage');
+                  if (data.type == 'volume') {
+                      showVolume(document.getElementById('volume_' + peer.id), data.volume);
+                  }
+              });
+              webrtc.on('videoAdded', function (video, peer) {
+                  //console.log('video added', peer);
+
+                  var id = 'container_' + webrtc.getDomId(peer);
+
+                  console.error('videoAdded : ' + id);
+
+
+                  var el = $('<li />')
+                    .attr('class', 'stream-video-wrapper video-stream')
+                    .attr('id', id)
+                    .append(video);
+
+                  $('#remotesPanel').append(el);
+
+                  //resizeRemoteVideoScreen();
+
+
+                  //console.error($('#remotesPanel').find('#' + id).find('video').attr('src'));
+                  var videoObject = $('#remotesPanel').find('#' + id).find('video');
+                  videoObject.css({'width':'200px', 'height':'150px'})
+                  //console.error('video src : ' + videoObject.attr('src'));
+                  //videoObject.attr('src', videoObject.attr('src') + '?main');
+                //  alert($('#' + id).attr('src'))
+
+/*
+                  var participantsVideo = $('<video class="video-paticipants"></video>');
+                  console.error('src : ' + videoObject.attr('src'))
+                  participantsVideo.attr('src', videoObject.attr('src'));
+                  var remotePaticipantsHtml = $('<div />')
+                    .attr('class', 'remote-paticipants')
+                    .attr('id', id + '_paticipants')
+                    .append(participantsVideo);
+
+                  $('#remotePaticipantsLayer').append(remotePaticipantsHtml);
+
+                  var ckHtml = '<div class="ck-layer">';
+                  ckHtml += '<input type="checkbox" id="' + id + '_ck" video-source="' + id + '" checked />';
+                  ckHtml += '</div>';
+                  $(ckHtml).appendTo('#' + id + '_paticipants');
+                  $('#' + id + '_ck').on('click', function() {
+                    var videoSource = $(this).attr('video-source');
+
+                    if ($(this).prop('checked'))
+                    {
+                      $('#' + videoSource).show();
+                    }
+                    else
+                    {
+                      $('#' + videoSource).hide();
+                    }
+                  });
+*/
+              });
+              webrtc.on('videoRemoved', function (video, peer) {
+                  console.error('videoRemoved');
+                  //console.log('video removed ', peer);
+
+                  if (peer)
+                  {
+                    var id = 'container_' + webrtc.getDomId(peer);
+                    $('#remotesPanel').find('#' + id).remove();
+
+                    //$('#remotePaticipantsLayer').find('#' + id + '_paticipants').remove();
+                  }
+
+                  /*
+                  var remotes = document.getElementById('remotesPanel');
+                  var el = document.getElementById('container_' + webrtc.getDomId(peer));
+                  if (remotes && el) {
+                      remotes.removeChild(el);
+                  }
+                  */
+              });
+              webrtc.on('volumeChange', function (volume, treshold) {
+                  //console.log('own volume', volume);
+                  //showVolume(document.getElementById('localVolume'), volume);
+              });
+
+              webrtc.on('localScreenAdded', function (video) {
+                  console.error('localScreenAdded');
+
+                  webrtc.mute();
+
+                  video.onclick = function () {
+                      video.style.width = video.videoWidth + 'px';
+                      video.style.height = video.videoHeight + 'px';
+                  };
+                  document.getElementById('localScreenContainer').appendChild(video);
+
+                  $('#localScreenContainer').find('video').css({'width':'200px'});
+                  $('#localScreenLayer').show();
+              });
+              // local screen removed
+              webrtc.on('localScreenRemoved', function (video) {
+                  console.error('localScreenRemoved');
+                  document.getElementById('localScreenContainer').removeChild(video);
+                  $('#localScreenLayer').hide();
+              });
+
+              webrtc.on('mute', function (data) { // show muted symbol
+                console.error('___mute');
+                webrtc.getPeers(data.id).forEach(function (peer) {
+                    if (data.name == 'audio') {
+                        $('#videocontainer_' + webrtc.getDomId(peer) + ' .muted').show();
+                    } else if (data.name == 'video') {
+                        $('#videocontainer_' + webrtc.getDomId(peer) + ' .paused').show();
+                        $('#videocontainer_' + webrtc.getDomId(peer) + ' video').hide();
+                    }
+                });
+              });
+              webrtc.on('unmute', function (data) { // hide muted symbol
+                console.error('unmute');
+                  webrtc.getPeers(data.id).forEach(function (peer) {
+                      if (data.name == 'audio') {
+                          $('#videocontainer_' + webrtc.getDomId(peer) + ' .muted').hide();
+                      } else if (data.name == 'video') {
+                          $('#videocontainer_' + webrtc.getDomId(peer) + ' video').show();
+                          $('#videocontainer_' + webrtc.getDomId(peer) + ' .paused').hide();
+                      }
+                  });
+              });
+
+              //local mute/unmute events
+              webrtc.on('audioOn', function () {
+                  // your local audio just turned on
+                    console.error('audioOn');
+              });
+              webrtc.on('audioOff', function () {
+                  // your local audio just turned off
+                  console.error('audioOff');
+              });
+              webrtc.on('videoOn', function () {
+                  // local video just turned on
+                  console.error('videoOn');
+              });
+              webrtc.on('videoOff', function () {
+                  // local video just turned off
+                  console.error('videoOff');
+              });
+
+              webrtc.on('localScreenStopped', function () {
+                console.error('localScreenStopped');
+                  $('#localScreenLayer').find('video').remove();
+                  $('#localScreenLayer').hide();
+              });
+            }
+
+            // Since we use this twice we put it here
+            function setRoom(name) {
+                $('form').remove();
+                $('h1').text(name);
+                $('#join-url-link').text(location.href);
+                $('body').addClass('active');
+            }
+
+            function showVolume(el, volume) {
+                if (!el) return;
+                if (volume < -45) { // vary between -45 and -20
+                    el.style.height = '0px';
+                } else if (volume > -20) {
+                    el.style.height = '100%';
+                } else {
+                    el.style.height = '' + Math.floor((volume + 100) * 100 / 25 - 220) + '%';
+                }
+            }
+
+            if (room)
+            {
+                setRoom(room);
+            }
+            else
+            {
+                $('form').submit(function () {
+                    var val = $('#sessionInput').val().toLowerCase().replace(/\s/g, '-').replace(/[^A-Za-z0-9_\-]/g, '');
+                    webrtc.createRoom(val, function (err, name) {
+                        console.log(' create room cb', arguments);
+
+                        var newUrl = location.pathname + '?' + name;
+                        console.error('newUrl : ' + newUrl)
+                        if (!err) {
+                            history.replaceState({foo: 'bar'}, null, newUrl);
+                            setRoom(name);
+                        } else {
+                            console.log(err);
+                        }
+                    });
+                    return false;
+                });
+            }
+
+
+
+            // mute / unmute audio
+            $('#toggleAudio').on('click', function() {
+              if ($(this).hasClass('mute'))
+              {
+                webrtc.unmute();
+                $(this).removeClass('mute');
+                $(this).find('img').attr('src', '/images/mic.png');
+              }
+              else
+              {
+                webrtc.mute();
+                $(this).addClass('mute');
+                $(this).find('img').attr('src', '/images/mic_off.png');
+              }
+            });
+
+            $('#toggleVideo').on('click', function() {
+              if ($(this).hasClass('blind'))
+              {
+                webrtc.resumeVideo();
+                $(this).removeClass('blind');
+                $(this).find('img').attr('src', '/images/video.png');
+              }
+              else
+              {
+                webrtc.pauseVideo();
+                $(this).addClass('blind');
+                $(this).find('img').attr('src', '/images/video_off.png');
+              }
+            });
+
+        </script>
+    </body>
+</html>

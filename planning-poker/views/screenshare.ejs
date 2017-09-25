@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Spectra Mobile 화면공유</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta charset="utf-8">
+        <meta content="Spectra Mobile 화면공유" name="description" />
+        <meta content="Spectra Mobile 화면공유" />
+        <meta content="Spectra Mobile 화면공유" property="og:title" />
+        <meta content="웹브라우저로 화면공유 하세요." property="og:description" />
+        <meta content="http://coffee.spectra.co.kr/mobile/static/images/app-icon-800.jpg" property="og:image" />
+        <meta content="website" property="og:type" />
+        <meta content="node.spectra.co.kr" property="og:site_name" />
+        <meta name="google-site-verification" content="-fdI2m0lY0uMI7AlxgjpKXiP9aojyxSXv8RpNFa1_Io" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <!-- style -->
+        <link rel='shortcut icon' type='image/x-icon' href='/images/favicon-32.ico' />
+        <link href="//fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <link href="//cdnjs.cloudflare.com/ajax/libs/animate.css/3.2.0/animate.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="/css/bootstrap.min.css">
+        <link rel="stylesheet" href="/css/screenshare.css">
+
+        <link rel="chrome-webstore-item" href="https://chrome.google.com/webstore/detail/iaeedhfnjbciojeciegcpnglenlkhoni">
+        <style>
+          body {font-family: '맑은 고딕', '굴림';}
+          .screen-wrapper {
+            width:100%;
+            text-align:center;
+          }
+          .bg1 {background-color:#2f3e4f !important;}
+          .bg2 {background-color:#4d5659 !important;}
+
+        </style>
+        <script src="/js/lib/jquery/jquery-1.11.3.min.js"></script>
+        <script src="/js/lib/webrtc/simplewebrtc.bundle.js"></script>
+        <script type="text/javascript" src="https://cdn.firebase.com/js/client/2.4.2/firebase.js"></script>
+        <script src="/js/lib/bootstrap/bootstrap-notify.js"></script>
+        <script src="/js/lib/ZeroClipboard.min.js"></script>
+        <script src="/js/screenshare-ui.min.js"></script>
+        <script>
+        var room = location.pathname.split('/')[2];
+        var ipAddress = '<%=ipAddress%>';
+        var username = getCookie('un');
+        if (username)
+        {
+          username = username.replace(/"/g, '');
+          username = decodeURIComponent(username);
+        }
+        $(function() {
+          // Chrome Extension 설치여부 확인
+          var chromeExtensionImg = new Image();
+          chromeExtensionImg.onerror = function() {
+            log('extension onerror');
+            $('#btnScreenShare').on('click.chrome-install', function() {
+              log('chrome-install.click');
+              $('#btnScreenShare').off('click.chrome-install');
+              try
+              {
+                chrome.webstore.install();
+              }
+              catch (e)
+              {
+                if (detectmob())
+                {
+                  $.notify({
+                      message: '모바일에서는 사용할 수 없습니다. PC에서 사용하시기 바랍니다.'
+                  }, {
+                      type: 'danger'
+                  });
+                }
+                else
+                {
+                  $.notify({
+                      message: '지원하지 않는 브라우저 입니다. [Chrome]을 사용하시기 바랍니다.'
+                  }, {
+                      type: 'danger'
+                  });
+                }
+              }
+            });
+          }
+
+          setTimeout(function() {
+            chromeExtensionImg.src = 'chrome-extension://iaeedhfnjbciojeciegcpnglenlkhoni/images/icon_16.png'; // Spectra Mobile App에 대한 이미지 아이콘
+          }, 500);
+
+          initialize();
+        });
+        </script>
+    </head>
+    <body>
+      <div>
+        <div>
+
+          <div class="alert alert-danger" id="support-browser-notify" role="alert" style="display:none">지원하지 않는 브라우저 입니다. Chrome을 사용하시기 바랍니다.</div>
+          <div class="panel panel-default">
+            <div class="panel-heading bg1" style="height:50px; min-width:600px;">
+              <!--
+              <button id="btnScreenShare" class="btn btn-success btn-sm">
+                  <span class="share-text" style="display:inline;">화면공유</span>
+                  <span class="badge"></span>
+              </button>
+            -->
+              <div id="paticipantsLayer" style="color:#fff; display:none; position:absolute; right:5px; background:#2f3e4f; z-index:2; height:30px;">
+                <span class="badge"></span>명의 사용자가 보고 있습니다.
+              </div>
+              <!--<button id="btnFullScreen" class="btn btn-default btn-sm" style="display:none;">최대화</button>-->
+              <span id="copyUrlSpan" style="display:none; color:#fff;">
+                <button id="btnCopyUrl" class="btn btn-success btn-sm">URL 복사</button>
+              </span>
+              <span style="position:absolute; right:10px; z-index:1;">
+                <img src="/images/app-icon-64.png" width="30" height="30"/>
+                <span style="color:#fff;">화면공유</span>
+              </span>
+            </div>
+            <div class="panel-body" style="min-height:530px">
+                <!--<video id="localVideo" style="height: 150px;" oncontextmenu="return false;"></video>-->
+
+              <div id="localScreenLayer" class='screen-share-layer' style="display:none; margin-bottom:5px; position:relative;">
+                <div id="localScreenContainer" class="screen-wrapper">
+                </div>
+                <div style="text-align:center;">
+                  <button id="btnCloseScreenShare" class="btn btn-danger btn-sm" style="width:80%">화면공유 끊기</button>
+                </div>
+
+              </div>
+
+              <div id="loadingTextLayer" class="alert alert-warning" style="position:absolute; top:40%; left:50%; margin-left:-50px; z-index:1; display:none;">
+                화면 로딩중...
+              </div>
+
+              <div id="selectScreenLayer" style="position:absolute; top:30%; text-align:center; z-index:1; display:block; color:; font-size:36px; width:95%;">
+
+                <button id="btnScreenShare" class="btn btn-success btn-lg">
+                    <span class="share-text" style="display:inline;">공유 화면 선택...</span>
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+        <script>
+            var webrtc = null;
+            var peerConnectionConfig;
+
+            checkSupportBrowser();
+            initXirsys();
+            updateToFirebase(room);
+
+        </script>
+    </body>
+</html>

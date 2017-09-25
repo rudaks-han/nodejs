@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Spectra Video</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta charset="utf-8">
+        <meta content="Spectra Mobile 화상채팅 & 화면공유" name="description" />
+        <meta content="Spectra Mobile Video" />
+        <meta content="Spectra Mobile Video" property="og:title" />
+        <meta content="Spectra Mobile 화상채팅 & 화면공유" property="og:description" />
+        <meta content="http://coffee.spectra.co.kr/mobile/static/images/app-icon-64.png" property="og:image" />
+        <meta content="website" property="og:type" />
+        <meta content="node.spectra.co.kr" property="og:site_name" />
+        <meta name="google-site-verification" content="-fdI2m0lY0uMI7AlxgjpKXiP9aojyxSXv8RpNFa1_Io" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <!-- style -->
+        <link rel='shortcut icon' type='image/x-icon' href='/images/favicon-32.ico' />
+        <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <link rel="stylesheet" href="/css/materialize.min.css">
+        <link rel="stylesheet" href="/css/video.css">
+        <!-- javascript -->
+        <script src="/js/lib/jquery/jquery-1.11.3.min.js"></script>
+        <script src="/js/lib/materialize.min.js"></script>
+        <script>
+        $(function() {
+          $('#createRoom').on('submit', function(e) {
+            e.preventDefault();
+
+            var room = $('#room').val().trim();
+            if (room.length == 0)
+            {
+              Materialize.toast('방이름을 입력하세요.', 3000);
+              return;
+            }
+
+            location.href = '/video/' + room;
+          });
+
+        });
+        </script>
+    </head>
+
+    <body>
+      <section style="padding:30px 0;display:block;">
+          <div class="container" style="margin:0 auto; width:70%;">
+              <section class="contents" style="padding:30px 0; display:block;">
+                <h1 class="logo" style="width:180px; height:80px; margin:0 auto 15px; text-indent:-9999em; display:block; background:url('/images/app-icon-64.png') no-repeat;">Spectra Mobile</h1>
+
+                <p style="text-align:center; margin-bottom:30px;">
+                  화상채팅 & 화면공유
+                </p>
+
+                <form class="create-room" id="createRoom" style="margin: 0 auto; text-align:center; max-width:500px;">
+                  <input type="hidden" name="_hidden" />
+                  <div class="form-roomname" style="display:inline-block; text-align:left; border-radius:3px; padding:3px; text-align:left;">
+                    <!--
+                      <span class="room-domain" style="color:#b7c0c3; margin-left:10px; display:inline-block; line-height:30px; height:30px; vertical-align:top;">
+                          <span>node.spectra.co.kr</span>/
+                      </span>
+                      <div style="display:inline-block; position:relative;">
+                        <input class="form-input" style="border:none; color:#00b0e9; margin-bottom:0; padding:0; height:30px; line-height:30px; outline:0; width:100%; border-radius:3px;" />
+                      </div>
+                    -->
+                    <div class="input-field col s6">
+                      <input id="room" name="room" type="text" class="validate">
+                      <label for="room-name">방이름</label>
+                    </div>
+                  </div>
+                  <div style="text-align:center; margin-top:10px;">
+                    <button id="btnStartChat" class="waves-effect waves-light btn">채팅 시작</button>
+                  </div>
+                </form>
+              </section>
+          </div>
+      </section>
+    </body>
+</html>
