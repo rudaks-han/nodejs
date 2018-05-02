@@ -1,0 +1,98 @@
+@import url(//fonts.googleapis.com/earlyaccess/nanumgothic.css);
+
+body {
+    font-family: "Nanum Gothic", sans-serif;
+}
+
+.poker-card {
+    display:block;
+    margin-bottom:5px;
+    //border:2px solid #f46200;
+    background-color:#fff;
+    border-radius:5px;
+    float:left;
+    width:70px;
+    height:120px;
+    line-height:120px;
+    margin-right:5px;
+    text-align:center;
+    font-size:30px;
+    font-weight:bold;
+}
+.poker-card-display {
+    float:left;
+    margin-right:40px;
+    position:relative;
+}
+
+.poker-card-display .poker-card-cover {
+    display:block;
+    position:absolute;
+    background-image: url('/images/pattern_bg.png');
+}
+
+.poker-card-player {
+    color:#fff;
+    font-size:15px;
+    display:block;
+    width:70px;
+    clear:both;
+    text-align:center;
+    overflow:hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.card-choice {
+    display:block;
+    border:2px solid #594080;
+    border-radius:5px;
+    float:left;
+    width:70px;
+    height:120px;
+    font-size:30px;
+    line-height:120px;
+    margin-right:5px;
+    margin-bottom:5px;
+    text-align:center;
+    font-weight:bold;
+    color:#594080;
+    background: #fff;
+}
+#card-selected-list {min-height:180px;}
+.card-choice:hover, .card-choice:active, .card-choice:focus {
+    text-decoration: none;
+    color:#594080;
+}
+
+.card-choice-selected {
+    border:2px solid #594080;
+    background: #594080;
+    color:#fff;
+}
+
+.card-choice-selected:hover, .card-choice-selected:active, .card-choice-selected:focus {
+    text-decoration: none;
+    color:#fff;
+}
+
+.user-chose {
+    border-left-color: #1b809e;
+    border-left-width: 5px;
+}
+
+#participants .text-value {
+    /*display: block;
+    overflow:hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    */
+}
+
+.role {
+    font-size:13px;
+}
+
+.card-size-small {
+    width:40px;
+    height:40px;
+}

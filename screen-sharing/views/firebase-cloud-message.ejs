@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+
+<script src="https://www.gstatic.com/firebasejs/3.7.2/firebase.js"></script>
+<script src="/js/lib/jquery/jquery-1.11.3.min.js"></script>
+
+<!--script src="js/ui/firebase-cloud-message.js"></script-->
+
+<script>
+	var clientToken = '';
+	var config = {
+		apiKey: " AIzaSyAABpKCGHpzhfV8NfsJL_okh1XZLseZSkA",
+		authDomain: "spectra-mobile-61656.firebaseapp.com",
+		databaseURL: "https://spectra-mobile-61656.firebaseio.com",
+		messagingSenderId: "589322820950",
+	};
+	firebase.initializeApp(config);
+
+	const messaging = firebase.messaging();
+
+	navigator.serviceWorker.register('/js/worker/firebase-cloud-message-sw.js', {insecure:true})
+	.then((registration) => {
+
+	  	messaging.useServiceWorker(registration);
+
+		messaging.requestPermission()
+		.then(function() {
+			console.log('Have permission');
+			return messaging.getToken();
+		})
+		.then(function(token) {
+			console.log('token : ' + token);
+			clientToken = token;
+			
+			document.getElementById('token').value = token;
+			
+		})
+		.catch(function(err) {
+			console.log('Error occurred');
+		});
+	  // Request permission and get token.....
+	});
+
+	messaging.onMessage(function(payload) {
+	  console.log("Message received. ", payload);
+	  //alert('received');
+	  // ...
+	});
+
+	$(function() {
+		$('#btn-send').on('click', function() {
+			var data = {
+				token : $('#token').val(),
+				title : $('#title').val(),
+				message : $('#message').val()
+			};
+			$.ajax({
+              url: '/firebase-cloud-message-action',
+              //dataType: 'json',
+              type: 'post',
+              data: data,
+              success: function(result) {
+                  alert(result);
+              }
+			});
+		});
+	});
+</script>
+<script>
+	//console.error(firebase);
+</script>
+
+firebase cloud messaging
+
+<br>
+title : <input type="text" name="title" id="title" value="제목~" /> <br/>
+message : <input type="text" name="message" id="message" value="안녕하세요~" /> <br/>
+client device key : <input type="text" name="token" id="token" value="" /> <br/>
+<input type="button" name="btn-send" id="btn-send" value="전송"/>

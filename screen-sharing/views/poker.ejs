@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+        <meta http-equiv="Content-Script-Type" content="text/javascript" />
+        <meta http-equiv="Content-Style-Type" content="text/css" />
+        <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=1">
+        <title>EER Planning Poker</title>
+
+        <link rel="stylesheet" href="/css/bootstrap.min.css">
+        <link href="/css/bootswatch.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+        <link href="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.5.0/bootstrap3-editable/css/bootstrap-editable.css" rel="stylesheet"/>
+        <link href="/css/style.css" rel="stylesheet">
+
+        <script src="/js/lib/jquery/jquery-1.11.3.min.js"></script>
+        <script src="/js/lib/jquery/jquery-ui-1.11.4.min.js"></script>
+        <script src="/js/lib/bootstrap/tether.min.js"></script>
+        <script src="/js/lib/bootstrap/bootstrap.min.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.5.0/bootstrap3-editable/js/bootstrap-editable.min.js"></script>
+        <script src="/js/lib/jquery/plugin/jquery.mixitup.js"></script>
+        <script src="/js/lib/bootstrap/bootstrap-notify.min.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="/js/poker-ui.min.js"></script>
+
+        <style>
+        .ui-effects-transfer {
+            border: 2px dotted gray;
+        }
+        </style>
+
+        <script>
+        //var socket = io.connect();
+        var baseUrl = window.location.protocol + "//" + window.location.host + "/poker";
+        //var baseUrl = window.location.protocol + "//" + window.location.host + "";
+        console.error('baseUrl : ' + baseUrl);
+        var options = {
+          transports: ['xhr-polling'/*, 'websocket' */],
+          'sync disconnect on unload': true
+        };
+        //var socket = io.connect(baseUrl);
+        var socket = io.connect(baseUrl, options);
+        var pathname = location.pathname;
+        var room = '' + pathname.substring(pathname.lastIndexOf('/')+1);
+        //console.error('room: ' + room);
+        //var socket = io.connect('//localhost:9999/poker', {path:'/socket.io'});
+
+        function debug(str, data)
+        {
+          console.log('[' + str + '] \n ' + JSON.stringify(data));
+        }
+
+        function showLoginLayer()
+        {
+          $('#input-username').modal('show');
+          // room목록 가져오기
+          socket.emit('room-list', {});
+
+          $('#input-username').on('hidden.bs.modal', function () {
+            // do something…
+            var username = $.trim($('#username').val());
+            if (username == '')
+            {
+                $('#input-username').modal('show');
+                return;
+            }
+          });
+        }
+
+        $(function() {
+            $('.nav-collapse').collapse();
+
+            // 이름이 없다면
+            var username = localStorage.getItem('username');
+            if (username == null)
+            {
+                showLoginLayer();
+            }
+
+            // 로그인 버튼 클릭시
+            $('#login').on('click', onLoginClick);
+
+            // 로그아웃 버튼 클릭시
+            $('#logout').on('click', onLogoutClick);
+
+            // user story keydown
+            $('#issue-id').on('keydown', onIssueIdKeydown);
+
+            // Issue 검색시
+            $('#search-issue').on('click', onSearchIssueClick);
+
+            // storypoint 저장시
+            $('#update-story').on('click', onUpdateStoryClick);
+
+            // 카드 선택시
+            $('#card-selection > a').on('click', onSelectCardClick);
+
+            // 이름 표시 클릭시
+            $('#show-username').on('click', onShowUsernameClick);
+
+            // 카드 취소 클릭시
+            $('#cancel-card').on('click', onCancelCardClick);
+
+            // 카드 열기 클릭시
+            $('#open-card').on('click', onOpenCardClick);
+
+            // 카드 닫기 클릭시
+            $('#close-card').on('click', onCloseCardClick);
+
+            // 초기화 클릭시
+            $('#reset-card').on('click', onResetCardClick);
+
+            $('#game-planning-poker').on('click', onGamePlanningPokerClick);
+            $('#game-mix-it-up').on('click', onGameMixItUpClick);
+            $('#game-memory').on('click', onGameMemoryClick);
+
+
+            //$('#mix').on('click', onMixClick);
+
+            $('#mix-it-up-layer').find('#start').on('click', onStartMixItUpClick);
+            $('#mix-it-up-layer').find('#check-all').on('click', onCheckAllMixItUpClick);
+            $('#mix-it-up-layer').find('#open').on('click', onOpenMixItUpClick);
+            $('#mix-it-up-layer').find('#close').on('click', onCloseMixItUpClick);
+            $('#mix-it-up-layer').find('#add-layer').on('click', onAddLayerMixItUpClick);
+
+            $('#memory-layer').find('#start').on('click', onStartMemoryClick);
+            $('#memory-layer').find('#open').on('click', onOpenMemoryClick);
+            $('#memory-layer').find('#close').on('click', onCloseMemoryClick);
+            $('#memory-layer').find('#row').on('change', onRowMemoryChange);
+            $('#memory-layer').find('#target').on('change', onTargeteMemoryChange);
+
+            if (room == '__login__')
+            {
+              showLoginLayer();
+              //onLogoutClick();
+            }
+
+            socket.on('connection', function(data) {
+                //console.error('connection : ' + socket.io.engine.transport.name);
+                debug('connection', data);
+                var username = localStorage.getItem('username');
+                var role = localStorage.getItem('role');
+                if (username != null)
+                {
+                    socket.emit('login', {
+                        username : username,
+                        role: role,
+                        room : room
+                    });
+                }
+            });
+
+            socket.on('test', function(data) {
+              alert('test')
+            });
+
+            socket.on('disconnect', function(data) {
+                debug('disconnect', data);
+                //socket.emit('userlist');
+                var username = localStorage.getItem('username');
+                var role = localStorage.getItem('role');
+                var uid = localStorage.getItem('uid');
+                socket.emit('leave-room', {
+                    username : username,
+                    role: role,
+                    uid: uid,
+                    room: room
+                });
+            });
+
+            socket.on('room-list', function(data) {
+              debug('###############room-list', data);
+              $('#room-list').find('li').remove();
+              $.each(data, function(key, val) {
+                  var html = '<li class="list-group-item">' + key;
+                  html += '<span style="float:right;"><button id="login" type="button" class="btn btn-success btn-xs" onclick="javascript:onJoinRoom(\'' + key + '\');">Join</button></span>';
+                  html += '</li>';
+                  $(html).appendTo('#room-list');
+              });
+
+            });
+
+            socket.on('login-result', function(data) {
+                debug('login-result', data);
+
+                localStorage.setItem('username', data.username);
+                localStorage.setItem('role', data.role);
+                localStorage.setItem('uid', data.uid);
+
+                window.history.pushState(null, null, '/poker/' + data.room);
+                room = data.room;
+
+                if (data.role == 'scrummaster')
+                {
+                    $('.navbar-nav').show();
+                }
+
+                setTimeout(function() {
+                    changeGame(data);
+                }, 100);
+
+            });
+
+            socket.on('login-fail', function(data) {
+                alert('이미 동일한 사용자(' + data + ')가 접속하고 있습니다.');
+            });
+
+            socket.on('logout', function(data) {
+                debug('logout', data);
+                //socket.emit('userlist');
+                var username = localStorage.getItem('username');
+                var role = localStorage.getItem('role');
+                var uid = localStorage.getItem('uid');
+
+                if (data.uid == uid)
+                {
+                    localStorage.removeItem('uid');
+                    localStorage.removeItem('username');
+                    localStorage.removeItem('role');
+
+                    location.reload();
+                }
+
+                window.history.pushState(null, null, '/poker/__login__');
+            });
+
+            socket.on('get-user-avata', function(data) {
+                if (data.avatarUrls == undefined)
+                {
+                    $('#participants').find('li[uid="'+data.uid+'"]').find('img.avatar').attr('src', '/images/person/' + data.role + '.png')
+                }
+                else
+                {
+                    $('#participants').find('li[uid="'+data.uid+'"]').find('img.avatar').attr('src', data.avatarUrls["48x48"]);
+                }
+            });
+
+            socket.on('rename-user', function(data) {
+
+                $('#participants > li[uid="' + data.uid + '"]').find('.text-value').text(data.username);
+
+                var $pokerCardPlayer = $('#card-selected-list > div[uid="' + data.uid + '"]').find('.poker-card-player');
+                $pokerCardPlayer.text(data.username);
+                $pokerCardPlayer.attr('title', data.username);
+            });
+
+            socket.on('join-room', function(data) {
+                debug('join-room', data);
+
+                var uid = localStorage.getItem('uid');
+
+                var html = '<li class="list-group-item" ';
+                html += 'uid="' + data.uid + '" ';
+                html += 'role="' + data.role + '">';
+
+                var avataUrl = data.avataUrl;
+                if (avataUrl == undefined)
+                {
+                    avataUrl = getUserImageByRole(data.role);
+                }
+
+                html += '<img class="avatar" src="' + avataUrl + '" style="width:25px; height:25px; margin-right:2px;" class="avatar"/>';
+                if (uid == data.uid)
+                {
+                    html += '<a href="#" id="rename-username" date-type="text" data-title="이름을 입력하세요" class="text-value">' + data.username + '</a>';
+                }
+                else
+                {
+                    html += '<span class="text-value">' + data.username + '</span>';
+
+                }
+
+                html += ' <span class="role">(' + getRoleName(data.role) + ')</span>';
+                html += '</li>';
+                $('#participants').append(html);
+
+                if (uid == data.uid)
+                {
+                    $('#rename-username').editable();
+                    $('#rename-username').on('save', function(e, params) {
+                        e.preventDefault();
+
+                        socket.emit('rename-user', {
+                            username : params.newValue,
+                            room : room
+                        });
+
+                        localStorage.setItem('username', params.newValue);
+                    })
+                }
+            });
+
+            socket.on('leave-room', function(data) {
+                debug('leave-room', data);
+                $('#participants').find('[uid=' + data.uid + ']').remove();
+
+                $('#card-selected-list').find('[uid=' + data.uid + ']').remove();
+
+            });
+
+            socket.on('game.start', function(data) {
+                changeGame(data);
+            });
+
+            socket.on('search-issue', function(data) {
+                if (typeof data.errorMessages != 'undefined')
+                {
+                    alert(data.errorMessages);
+                    $('#story-summary').text('');
+                    return;
+                }
+                $('#story-summary').text(data.fields.summary);
+                $('#story-point').val(data.fields.customfield_10002);
+
+            });
+
+            socket.on('update-story', function(data) {
+
+                alert('저장되었습니다.');
+            });
+
+            socket.on('userlist', function(data) {
+
+                //$('#participants > li').remove();
+
+                var uid = localStorage.getItem('uid');
+
+                $.map(data, function(val, i) {
+                    var html = '<li class="list-group-item" ';
+                    html += 'uid="' + val.uid + '" ';
+                    html += 'role="' + val.role + '">';
+
+                    var avataUrl = val.avataUrl;
+                    if (avataUrl == undefined)
+                    {
+                        avataUrl = getUserImageByRole(val.role);
+                    }
+
+                    html += '<img class="avatar" src="' + avataUrl + '" style="width:25px; height:25px; margin-right:2px;"/>';
+
+                    if (uid == val.uid)
+                    {
+                        html += '<a href="#" id="rename-username" date-type="text" data-title="이름을 입력하세요" class="text-value">' + val.username + '</a>';
+                        //html += ' <span class="badge">me</span>';
+                        html += ' <span class="role">(' + getRoleName(val.role) + ')</span>';
+                    }
+                    else
+                    {
+                        html += '<span class="text-value">' + val.username + '</span>';
+                        html += ' <span class="role">(' + getRoleName(val.role) + ')</span>';
+                    }
+
+                    html += '</li>';
+                    $('#participants').append(html);
+                });
+
+                //html += '<li class="list-group-item">' + data.username + '</li>';
+
+                //$('#participants').append(html);
+
+                $('#input-username').modal('hide');
+            });
+
+            socket.on('select-card', function(data) {
+
+                debug('select-card', data);
+
+                var _self = $(this);
+                var count = parseInt(data.count); // 건수 선택한 회수
+                if (count == 1) // 처음 선택할 경우
+                {
+                    var username = data.username;
+                    if (data.showUsername != 'Y')
+                    {
+                        username = 'No name';
+                    }
+
+                    var html = '';
+                    html += '<div uid="' + data.uid + '" class="poker-card-display">';
+                    html += '<a class="poker-card poker-card-value">' + data.value + '</a>';
+                    html += '<a class="poker-card poker-card-cover"></a>';
+                    html += '<span class="poker-card-player" title="' + username + '">' + username + '</span>';
+                    html += '</div>';
+
+                    if (data.showUsername == 'Y')
+                    {
+                        $('<div id="tmpcard_' + data.uid + '" class="poker-card-display" style="border:1px dotted gray; width:70px; height:120px;"></div>').appendTo('#card-selected-list');
+
+                        var to = $('#card-selected-list').find('#tmpcard_' + data.uid);
+                        var from = $('#participants').find('li[uid="' + data.uid + '"]');
+                        var options = {to: to, className: 'ui-effects-transfer'};
+
+                        from.effect('transfer', options, 500, function() {
+                           to.replaceWith(html);
+
+                            var uid = localStorage.getItem('uid');
+                            if (data.uid == uid)
+                            {
+                                $('#cancel-card').removeClass('disabled');
+                            }
+                        });
+                    }
+                    else
+                    {
+                        $(html).appendTo('#card-selected-list').show();
+
+                        var target = $('#card-selected-list').find('div[uid="' + data.uid + '"]');
+                        var options = {};
+                        target.effect('shake', options, 500, function() {
+                            var uid = localStorage.getItem('uid');
+                            if (data.uid == uid)
+                            {
+                                $('#cancel-card').removeClass('disabled');
+                            }
+                        });
+                    }
+
+                }
+                else
+                {
+                    var target = $('#card-selected-list').find('div[uid="' + data.uid + '"]');
+
+                    target.find('.poker-card-value').text(data.value);
+
+                    var username = data.username;
+                    if (data.showUsername != 'Y')
+                    {
+                        username = 'No name';
+                    }
+
+                    target.find('.poker-card-player').text(username);
+
+                    var options = {};
+                    target.effect('shake', options, 500, function() {});
+                }
+
+                $('#participants').find('li[uid="' + data.uid + '"]').addClass('user-chose');
+            });
+
+            socket.on('selected-card-list', function(data) {
+                $('#card-selected-list').empty();
+                $.map(data, function(val, i) {
+                    var html = '';
+                    html += '<div uid="' + val.uid + '" class="poker-card-display">';
+                    html += '<a class="poker-card poker-card-value">' + val.value + '</a>';
+                    html += '<a class="poker-card poker-card-cover"></a>';
+                    html += '<span class="poker-card-player">' + val.username + '</span>';
+                    html += '</div>';
+
+                   // alert(html);
+                    //$('#card-selected-list').append(html);
+
+                    $(html).appendTo('#card-selected-list');
+
+                    $('#participants > li[uid="' + val.uid + '"]').addClass('user-chose');
+                });
+            });
+
+            socket.on('show-username', function(data) {
+                $('#show-username').prop('checked', data.value);
+
+            });
+
+            socket.on('cancel-card', function(data) {
+
+                if (data.showUsername == 'Y')
+                {
+                    var from = $('#card-selected-list').find('div[uid="' + data.uid + '"]');
+                    var to = $('#participants').find('li[uid="' + data.uid + '"]');
+                    var options = {to: to, className: 'ui-effects-transfer'};
+
+                    setTimeout(function() {
+                        from.hide();
+                    }, 100);
+                    from.effect('transfer', options, 500, function() {
+                       //to.replaceWith(html);
+                        from.remove();
+                        to.removeClass('user-chose');
+
+                        $('#card-selection > a').removeClass('card-choice-selected');
+
+                        var uid = localStorage.getItem('uid');
+                        if (data.uid == uid)
+                        {
+                            $('#cancel-card').addClass('disabled');
+                        }
+                    });
+                }
+                else
+                {
+                    var from = $('#card-selected-list').find('div[uid="' + data.uid + '"]').fadeOut(function() {
+                        $(this).remove();
+                        $('#card-selection > a').removeClass('card-choice-selected');
+                    });
+                }
+
+            });
+
+
+            socket.on('open-card', function(data) {
+              var options = {};
+              $('#card-selected-list').find('.poker-card-cover').hide('drop', options, 1000, function() {
+                  var role = localStorage.getItem('role');
+                  if (role == 'scrummaster')
+                  {
+                      $('#open-card').hide();
+                      $('#close-card').show();
+                  }
+
+              });
+
+                $('#cancel-card').addClass('disabled');
+            });
+
+            socket.on('close-card', function(data) {
+              var options = {};
+              $('#card-selected-list').find('.poker-card-cover').show('drop', options, 1000, function() {
+                  var role = localStorage.getItem('role');
+                  if (role == 'scrummaster')
+                  {
+                      $('#open-card').show();
+                      $('#close-card').hide();
+                  }
+              });
+
+                $('#cancel-card').removeClass('disabled');
+            });
+
+            socket.on('reset-card', function(data) {
+              //$('#card-selected-list').find('.poker-card-display').removeClass('poker-card-display-hidden');
+              var options = {};
+              $('#card-selected-list').find('.poker-card-display').hide('explode', options, 1000, function() {
+                  $(this).remove();
+              });
+
+              $('#card-selection > a').removeClass('card-choice-selected');
+
+              $('#participants > li').removeClass('user-chose');
+
+                $('#cancel-card').addClass('disabled');
+
+                var role = localStorage.getItem('role');
+                if (role == 'scrummaster')
+                {
+                  $('#card-action-button > #close-card').hide();
+                  $('#card-action-button > #open-card').show();
+                }
+            });
+
+            socket.on('memory.start', function(data) {
+                var row = data.row;
+                var target = data.target;
+                var width = 32 + row*45;
+
+                $('#card-selected-list').find('.poker-card-display').remove();
+
+                $('#card-selected-list').css({width:width});
+
+
+                var memorySelectEvent = function() {
+
+                    var pos = $(this).attr('pos');
+                    var arPos = pos.split('x');
+                    var x = arPos[0];
+                    var y = arPos[1];
+                    var data = {};
+                    data.x = x;
+                    data.y = y;
+                    data.room = room;
+                    socket.emit('memory.select', data);
+                };
+
+                var tmpY = 0;
+                $.each(data.cards, function(y, x) {
+                    $.each(x, function(x, flag) {
+                        var pos = x + 'x' + y;
+
+                        var html = '';
+                        html += '<div class="poker-card-display" style="margin-right:0; display:none;" flag="' + flag + '" pos="' + pos + '">';
+                        html += '<a class="poker-card poker-card-value card-size-small"';
+                        if (flag)
+                        {
+                            html += ' style="background-color:yellow"; ';
+                        }
+                        html += '></a>';
+                        html += '<a class="poker-card poker-card-cover card-size-small" style="display:none"></a>';
+                        //html += '<span class="poker-card-player">&nbsp;</span>';
+                        html += '</div>';
+
+                        $(html).appendTo('#card-selected-list'); //.on('click', memorySelectEvent); //function() {
+                            /*var data = {};
+                            data.x = x;
+                            data.y = y;
+                            socket.emit('memory.select', data);
+                        });*/
+
+                    });
+                });
+
+                var options = {};
+                $('#card-selected-list').find('.poker-card-display').fadeIn(1000, function() {
+                    $(this).on('click', function(e) {
+                        return;
+                    });
+                });
+
+                setTimeout(function() {
+                    $('#card-selected-list').find('.poker-card-cover').fadeIn(2000, function() {
+
+                    }); //('pulsate', options, function() {});
+                }, 2000);
+
+                setTimeout(function() {
+                    $('#card-selected-list').find('.poker-card-display').on('click', memorySelectEvent);
+                }, 4000);
+
+            });
+
+            socket.on('memory.select', function(data) {
+                var pos = data.x + 'x' + data.y;
+                //$('#card-selected-list').find('.poker-card-display[pos="' + pos + '"]').find('.poker-card-cover').fadeOut();
+
+                var $card = $('#card-selected-list').find('.poker-card-display[pos="' + pos + '"]');
+
+                if ($card.attr('flag') == 1)
+                {
+                    $card.find('.poker-card-cover').fadeOut(100, function() {
+                        var targetCount = $('#memory-layer').find('#target').val();
+                        if ($('#card-selected-list').find('.poker-card-display[flag=1]').find('.poker-card-cover:hidden').length == targetCount)
+                        {
+                            $.notify({
+                                message: 'Well done.'
+                            }, {
+                                type: 'success'
+                            });
+                            $('#card-selected-list').find('.poker-card-cover').hide();
+
+                            $('#card-selected-list').find('.poker-card-display').unbind('click');
+                        }
+                    });
+                }
+                else
+                {
+                    $card.find('.poker-card-cover').hide('pulsate', {}, 500, function() {
+                        if ($('#card-selected-list').find('.poker-card-display[flag=0]').find('.poker-card-cover:hidden').length > 1)
+                        {
+                            $.notify({
+                                message: 'You failed.'
+                            }, {
+                                type: 'danger'
+                            });
+
+                            $('#card-selected-list').find('.poker-card-cover').hide();
+                            $('#card-selected-list').find('.poker-card-display').unbind('click');
+                        }
+                    } );
+                }
+
+                // 모두 맞췄을때 성공
+                var hitCount = 0;
+                var failCount = 0;
+                /*$('#card-selected-list').find('.poker-card-display[flag=1]').find('.poker-card-cover').each(function() {
+                    if ($(this).is(':hidden'))
+                    {
+                        hitCount++;
+                    }
+                });*/
+
+                $('#card-selected-list').find('.poker-card-display').each(function() {
+                    if ($(this).find('.poker-card-cover').is(':hidden'))
+                    {
+                        if ($(this).attr('flag') == 1)
+                        {
+                            hitCount++;
+                        }
+                        else
+                        {
+                            failCount++;
+                        }
+
+                    }
+                });
+
+                var targetCount = $('#memory-layer').find('#target').val();
+                if (targetCount == hitCount)
+                {
+                    //alert('Well done.');
+                    $.notify({
+                        message: 'Well done.'
+                    }, {
+                        type: 'danger'
+                    });
+                    $('#card-selected-list').find('.poker-card-cover').hide();
+                }
+
+                /*if (failCount > 1)
+                {
+                    $.notify({
+                        message: 'You failed.'
+                    }, {
+                        type: 'danger'
+                    });
+                }*/
+            });
+
+            socket.on('memory.changeRow', function(data) {
+
+                $('#memory-layer').find('#row').val(data.row);
+            });
+
+            socket.on('memory.changeTarget', function(data) {
+
+                $('#memory-layer').find('#target').val(data.target);
+            });
+
+
+
+
+        });
+        </script>
+    </head>
+
+    <body>
+
+
+		<div class="navbar navbar-default navbar-fixed-top">
+
+			<div class="container">
+            <div class="navbar-header">
+                <a href="#" class="navbar-brand">EER Planning Poker</a>
+                <button class="navbar-toggle collapsed" type="button" data-toggle="collapse" data-target="#navbar-main">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+
+            </div>
+            <div class="navbar-collapse collapse" id="navbar-main">
+                <ul class="nav navbar-nav" style="display:none">
+                    <li class="dropdown">
+		              <a class="dropdown-toggle" data-toggle="dropdown" href="#" id="menu-category">Game <span class="caret"></span></a>
+		              <ul class="dropdown-menu" aria-labelledby="Game">
+                             <li><a tabindex="-1" href="#" id="game-planning-poker">Planning Poker </a></li>
+                              <li><a tabindex="-1" href="#" id="game-mix-it-up">Mix it up </a></li>
+		              		<li><a tabindex="-1" href="#" id="game-memory">Memory </a></li>
+                             <li><a tabindex="-1" href="/game-wheel" target="_blank">Wheel (made by 이경환) </a></li>
+                      </ul>
+                    </li>
+	          	</ul>
+
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="#" id="logout">로그아웃</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+
+	</div>
+		<div class="container">
+
+			<div id="game" class="row">
+
+                <div id="user-story-layer" class="col-lg-10 planning-poker" style="display:none">
+
+                    <nav class="navbar navbar-default">
+                      <div class="container-fluid">
+                        <div class="navbar-header">
+                          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-2" aria-expanded="false">
+                            <span class="sr-only">Toggle navigation</span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                          </button>
+                          <a class="navbar-brand" href="#">User Story</a>
+                        </div>
+                        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-2">
+                          <form class="navbar-form navbar-left" role="search">
+                            <div class="form-group">
+                              <input type="text" id="issue-id" class="form-control" placeholder="Issue Id">
+                            </div>
+                            <a href="#" id="search-issue" class="btn btn-default">조회</a>
+
+                            <div class="form-group">
+                              <input type="text" id="story-point" class="form-control" placeholder="Story Point">
+                              <!--<input type="text" id="task-step" class="form-control" placeholder="작업단계">-->
+                            </div>
+                            <a href="#" id="update-story" class="btn btn-primary">저장</a>
+                          </form>
+                        </div>
+                      </div>
+                      <div id="story-summary" class="container-fluid" style="margin-bottom:5px;">
+
+                        </div>
+                    </nav>
+
+                </div>
+
+                <div id="mix-it-up-layer" class="col-lg-10 mix-it-up" style="display:none">
+
+                    <nav class="navbar navbar-default">
+                      <div class="container-fluid">
+                        <div class="navbar-header">
+                          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-3" aria-expanded="false">
+                            <span class="sr-only">Toggle navigation</span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                          </button>
+                          <a class="navbar-brand" href="#">Mix It Up</a>
+                        </div>
+                        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-3">
+                          <form class="navbar-form navbar-left" role="search">
+
+                            <a href="#" id="check-all" class="btn btn-default">전체 선택</a>
+                            <a href="#" id="start" class="btn btn-primary">Start</a>
+                            <a href="#" class="btn btn-default sort disabled" data-sort="random">Shuffle</a>
+
+                            <a href="#" id="open" class="btn btn-default disabled">카드 열기</a>
+                            <a href="#" id="close" class="btn btn-default disabled">카드 닫기</a>
+                            <a href="#" id="add-layer" class="btn btn-default disabled">항목 추가</a>
+                          </form>
+                        </div>
+                      </div>
+                      <div id="story-summary" class="container-fluid" style="margin-bottom:5px;">
+
+                        </div>
+                    </nav>
+
+                </div>
+
+                <div id="memory-layer" class="col-lg-10 memory" style="display:none">
+
+                    <nav class="navbar navbar-default">
+                      <div class="container-fluid">
+                        <div class="navbar-header">
+                          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-4" aria-expanded="false">
+                            <span class="sr-only">Toggle navigation</span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                          </button>
+                          <a class="navbar-brand" href="#">Memory</a>
+                        </div>
+                        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-4">
+                          <form class="navbar-form navbar-left" role="search">
+
+                            <select name="row" id="row" class="form-control">
+                                <option value="3">3 x 3</option>
+                                <option value="4">4 x 4</option>
+                                <option value="5">5 x 5</option>
+                                <option value="6">6 x 6</option>
+                                <option value="7">7 x 7</option>
+                            </select>
+
+                            <select name="target" id="target" class="form-control">
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                                <option value="7">7</option>
+                                <option value="8">8</option>
+                                <option value="9">9</option>
+                                <option value="10">10</option>
+                            </select>
+
+                            <a href="#" id="start" class="btn btn-primary">Start</a>
+
+                            <!--<a href="#" id="open" class="btn btn-default disabled">카드 열기</a>
+                            <a href="#" id="close" class="btn btn-default disabled">카드 닫기</a>-->
+                          </form>
+                        </div>
+                      </div>
+                      <div id="story-summary" class="container-fluid" style="margin-bottom:5px;">
+
+                        </div>
+                    </nav>
+
+                </div>
+
+				<div class="col-md-10 clearfix">
+
+                  <div id="card-action-button" style="text-align:right; margin-bottom:5px;">
+                   <div class="checkbox planning-poker" style="float:left" id="show-username-layer">
+                        <label>
+                          <input type="checkbox" id="show-username" value="Y" checked> 이름 표시
+                        </label>
+                      </div>
+                    <a id="cancel-card" class="btn btn-default disabled planning-poker">카드 취소</a>
+                    <a id="reset-card" class="btn btn-default planning-poker" style="display:none">초기화</a>
+                    <a id="open-card" class="btn btn-default planning-poker" style="display:none">카드 열기</a>
+                    <a id="close-card" class="btn btn-default planning-poker" style="display:none">카드 닫기</a>
+				</div>
+
+
+					<div id="card-selected-list" class="row alert" style="margin-left:0; margin-right:0; background-color:#594080; border-color:#594080; color:#fff;">
+
+					</div>
+
+					<div id="card-selection" class="planning-poker">
+                <a href="#" class="card-choice">0</a>
+                <a href="#" class="card-choice">1/2</a>
+                <a href="#" class="card-choice">1</a>
+                <a href="#" class="card-choice">2</a>
+                <a href="#" class="card-choice">3</a>
+                <a href="#" class="card-choice">4</a>
+                <a href="#" class="card-choice">5</a>
+                <a href="#" class="card-choice">6</a>
+                <a href="#" class="card-choice">7</a>
+                <a href="#" class="card-choice">8</a>
+                <a href="#" class="card-choice">9</a>
+                <a href="#" class="card-choice">10</a>
+                <a href="#" class="card-choice">13</a>
+                <a href="#" class="card-choice">15</a>
+                <a href="#" class="card-choice">20</a>
+                <a href="#" class="card-choice">30</a>
+                <a href="#" class="card-choice">50</a>
+                <a href="#" class="card-choice">?</a>
+            </div>
+
+				</div>
+				<div class="col-md-2">
+
+					<ul id="participants" class="list-group">
+					</ul>
+				</div>
+			</div>
+
+		</div>
+	</div>
+
+
+    <div id="input-username" class="modal">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <!--<button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>-->
+            <h4 class="modal-title">Login</h4>
+          </div>
+          <div class="modal-body">
+            <form class="form-horizontal" onsubmit="onLoginClick(); return false;">
+              <div class="form-group">
+                <label class="col-sm-2 control-label">이름</label>
+                <div class="col-sm-10">
+                  <input type="text" class="form-control" id="username" placeholder="이름을 입력하세요.">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-2 control-label">역할</label>
+                <div class="col-sm-10">
+                  <select id="role" name="role" class="form-control">
+                    <option value="developer">개발자</option>
+                    <option value="scrummaster">스크럼 마스터</option>
+                    <option value="viewer">참관자</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-2 control-label">방이름</label>
+                <div class="col-sm-10">
+                  <input type="text" class="form-control" id="room" placeholder="방이름을 입력하세요.">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-2 control-label">방목록</label>
+                <div class="col-sm-10">
+                  <ul class="list-group" id="room-list">
+
+                  </ul>
+                </div>
+              </div>
+            </form>
+
+          </div>
+          <div class="modal-footer">
+            <button id="login" type="button" class="btn btn-primary">Login</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    </body>
+</html>
