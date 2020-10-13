@@ -50,7 +50,7 @@ if (process.platform == 'win32') // 윈도우일 경우
 }
 else // 윈도우가 아닐 경우
 {
-	app.set('host', 'http://211.63.24.41');
+	app.set('host', 'http://127.0.0.1');
 	app.set('port', 9999);
 
 	httpServer = http.createServer(app);
@@ -149,13 +149,13 @@ app.get('/mobile', function(req, res) {
 });
 
 
-app.get('/health', function(req, res) {
+/*app.get('/health', function(req, res) {
   res.send(new Buffer(JSON.stringify({
     pid: process.pid,
     memory: process.memoryUsage(),
     uptime: process.uptime()
   })));
-});
+});*/
 
 app.get('/firebase-cloud-message', function(req, res) {
     res.render('firebase-cloud-message', { title: 'Firebase Cloud Message' });

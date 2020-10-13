@@ -1,6 +1,6 @@
 var socketio = require('socket.io');
 var crypto = require('crypto');
-var iv = new Buffer('0000000000000000');
+var iv = Buffer.from('0000000000000000');
 
 var io;
 var pokerIo;
@@ -21,13 +21,15 @@ module.exports.ready = function(socket)
 	}
 
 	base64_decode = function (encoded) {
-	  return new Buffer(encoded || '', 'base64').toString('utf8');
+	  return Buffer.from(encoded || '', 'base64').toString('utf8');
 	};
 
 	aes_decrypt = function(encryptedString)
 	{
-		var iv = new Buffer('');
-	 	var key = new Buffer('5d7956657279546f705365637265744b', 'hex');
+		//var iv = new Buffer('');
+		var iv = Buffer.from('');
+	 	//var key = new Buffer('5d7956657279546f705365637265744b', 'hex');
+	 	var key = Buffer.from('5d7956657279546f705365637265744b', 'hex');
 	 	var decipher = crypto.createDecipheriv('aes-128-ecb', key, iv);
 		var decipheredPlaintext = decipher.update(encryptedString, 'base64', 'buffer');
 		decipheredPlaintext += decipher.final('buffer');

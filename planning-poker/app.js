@@ -50,7 +50,7 @@ if (process.platform == 'win32') // 윈도우일 경우
 }
 else // 윈도우가 아닐 경우
 {
-	app.set('host', 'http://211.63.24.41');
+	app.set('host', 'http://127.0.0.1');
 	app.set('port', 9999);
 
 	httpServer = http.createServer(app);
@@ -150,7 +150,7 @@ app.get('/mobile', function(req, res) {
 
 
 app.get('/health', function(req, res) {
-  res.send(new Buffer(JSON.stringify({
+  res.send(Buffer.from(JSON.stringify({
     pid: process.pid,
     memory: process.memoryUsage(),
     uptime: process.uptime()
@@ -165,7 +165,7 @@ app.post('/firebase-cloud-message-action', function(req, res) {
 	console.error('firebase-cloud-message-action called');
 	//url: 'https://fcm.googleapis.com/fcm/send',
 	var options = {	  
-	  url: 'http://211.63.24.124:8000/mobile/fcm/send',
+	  url: 'http://127.0.0.1:8000/mobile/fcm/send',
 	  headers: {
 		'Authorization': 'key=AAAAiTZgnVY:APA91bH6CMziWjztlwb_MITZq6YHP6jn-PKxGFodmmDC6e4gv9v5tH_gZZgNcOhaiL7_2ZO1prOFowfz_uzSefhCSA92lP_ozEh5PJzPgYPoBXByjOJf7_RZ7voeJXfnhfUFC2S97aol',
 		'Content-Type': 'application/json'
